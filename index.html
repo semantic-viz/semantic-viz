@@ -6,7 +6,8 @@
     <title>Semantic Space Visualizer</title>
     <style>
         :root {
-            --header-bg: #1a1f24;
+            --sidebar-bg: #1a1f24;
+            --sidebar-width: 300px;
             --control-bg: #2d333b;
             --text-main: #ffffff;
             --text-muted: #8b949e;
@@ -20,51 +21,60 @@
             margin: 0;
             padding: 0;
             display: flex;
-            flex-direction: column;
-            height: 100vh;
+            height: 100vh; /* Full viewport height */
             background-color: var(--bg-main);
+            overflow: hidden; /* No global scroll */
         }
 
-        /* --- HEADER --- */
-        header {
-            background-color: var(--header-bg);
+        /* --- SIDEBAR --- */
+        aside {
+            width: var(--sidebar-width);
+            min-width: var(--sidebar-width);
+            background-color: var(--sidebar-bg);
             color: var(--text-main);
-            padding: 15px 25px;
             display: flex;
-            align-items: center;
-            gap: 20px;
-            flex-wrap: wrap;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+            padding: 25px;
+            gap: 25px;
+            overflow-y: auto; /* Scroll sidebar if controls get too tall */
+            z-index: 10;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+        }
+
+        .title-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-bottom: 20px;
             border-bottom: 1px solid var(--border);
         }
 
-        /* Title Container to handle long text and icon */
-        .title-container {
-            margin-right: auto;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            max-width: 500px; /* Stop title from squishing controls too much */
-        }
-
-        .icon { font-size: 1.8rem; }
+        .icon { font-size: 2rem; }
 
         h1 { 
             margin: 0; 
-            font-size: 1.1rem; /* Slightly smaller for long title */
+            font-size: 1.1rem; 
             font-weight: 600;
-            line-height: 1.3;
+            line-height: 1.4;
             letter-spacing: -0.3px;
+        }
+
+        /* Controls Area */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
         .control-group {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 8px;
         }
 
         label { 
-            font-size: 0.7rem; 
+            font-size: 0.75rem; 
             color: var(--text-muted); 
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -76,111 +86,127 @@
             background-color: var(--control-bg);
             color: white;
             font-size: 0.95rem;
-            padding: 8px 35px 8px 12px;
+            padding: 12px;
             border: 1px solid var(--border);
             border-radius: 6px;
             cursor: pointer;
-            min-width: 90px;
+            width: 100%; /* Full width of sidebar */
             background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%238b949e%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
             background-repeat: no-repeat;
-            background-position: right 10px top 50%;
+            background-position: right 12px top 50%;
             background-size: 10px auto;
             transition: all 0.2s;
         }
-
         select:hover { border-color: #8b949e; }
         select:focus { outline: none; border-color: var(--accent); }
         option:disabled { color: #666; background-color: #222; }
 
-        /* --- GRAPH AREA (CENTERED) --- */
-        #graph-container {
+        /* --- MAIN CONTENT AREA --- */
+        main {
             flex-grow: 1;
-            position: relative;
-            /* Centers the content */
             display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 25px;
-            background-color: var(--bg-main);
+            flex-direction: column;
+            position: relative;
         }
 
-        iframe {
-            /* Constrain width and create a "card" look */
-            width: 95%;
-            max-width: 1500px; /* Prevents absurd stretch on huge monitors */
-            height: 100%;
-            border: none;
-            display: block;
-            background-color: white;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08); /* Nice shadow */
-            border-radius: 12px; /* Rounded corners */
-        }
-
-        /* --- STATUS BAR --- */
         .status-bar {
-            text-align: center;
-            padding: 6px;
-            background: #e6e8eb;
+            padding: 8px 15px;
+            background: #fff;
             font-size: 0.8rem;
             color: #586069;
             border-bottom: 1px solid #d1d5da;
             font-family: monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #graph-container {
+            flex-grow: 1;
+            background-color: var(--bg-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0; /* Remove padding to maximize space */
+        }
+
+        /* The Card */
+        #iframe-wrapper {
+            width: 95%;  /* Requested: 95% Width */
+            height: 95%; /* Maximizing vertical space */
+            background: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
         }
     </style>
 </head>
 <body>
 
-    <header>
+    <aside>
         <div class="title-container">
             <span class="icon">🔍</span>
             <h1>Visualizations of the Semantic Space Exploration Performed by Ensemble Methods</h1>
         </div>
         
-        <div class="control-group">
-            <label for="dataset">Dataset</label>
-            <select id="dataset" onchange="updateView()">
-                <option value="ecooling">E-Cooling</option>
-                <option value="eheating">E-Heating</option>
-                <option value="housing">Housing</option>
-                <option value="yacht">Yacht</option>
-            </select>
-        </div>
-
-        <div class="control-group">
-            <label for="method">Method</label>
-            <select id="method" onchange="checkConstraints(); updateView()">
-                <option value="kpca">KPCA</option>
-                <option value="tsne">t-SNE</option>
-                <option value="umap">UMAP</option>
-            </select>
-        </div>
-
-        <div class="control-group">
-            <label for="dims">Dimensions</label>
-            <select id="dims" onchange="updateView()">
-                <option value="2">2D</option>
-                <option value="3" id="opt-3d">3D</option>
-            </select>
-        </div>
-
-        <div class="control-group">
-            <label for="run">Run Number</label>
-            <select id="run" onchange="updateView()">
+        <div class="controls">
+            <div class="control-group">
+                <label for="dataset">Dataset</label>
+                <select id="dataset" onchange="updateView()">
+                    <option value="ecooling">E-Cooling</option>
+                    <option value="eheating">E-Heating</option>
+                    <option value="housing">Housing</option>
+                    <option value="yacht">Yacht</option>
                 </select>
+            </div>
+
+            <div class="control-group">
+                <label for="method">Method</label>
+                <select id="method" onchange="checkConstraints(); updateView()">
+                    <option value="kpca">KPCA</option>
+                    <option value="tsne">t-SNE</option>
+                    <option value="umap">UMAP</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="dims">Dimensions</label>
+                <select id="dims" onchange="updateView()">
+                    <option value="2">2D</option>
+                    <option value="3" id="opt-3d">3D</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="run">Run Number</label>
+                <select id="run" onchange="updateView()">
+                    </select>
+            </div>
         </div>
-    </header>
+    </aside>
 
-    <div class="status-bar">
-        Path: <span id="path-display">Loading...</span>
-    </div>
+    <main>
+        <div class="status-bar">
+            Path: <span id="path-display">Loading...</span>
+        </div>
 
-    <div id="graph-container">
-        <iframe id="viewer" src=""></iframe>
-    </div>
+        <div id="graph-container">
+            <div id="iframe-wrapper">
+                <iframe id="viewer" src=""></iframe>
+            </div>
+        </div>
+    </main>
 
     <script>
         // CONFIG
-        const totalRuns = 5; 
+        const totalRuns = 30; 
         
         // 1. SETUP RUN DROPDOWN
         const runSelect = document.getElementById('run');
@@ -191,7 +217,7 @@
             runSelect.appendChild(opt);
         }
 
-        // 2. CHECK CONSTRAINTS (Handle t-SNE Logic)
+        // 2. CHECK CONSTRAINTS
         function checkConstraints() {
             const method = document.getElementById('method').value;
             const dimsSelect = document.getElementById('dims');
@@ -218,7 +244,6 @@
             const pathDisplay = document.getElementById('path-display');
 
             // --- FILE PATH CONSTRUCTION ---
-            // Using the path structure that worked for you:
             const filePath = `plots/${dataset}/run_${run}/${run}_${method}_${dims}d.html`;
             
             pathDisplay.textContent = filePath;
@@ -227,8 +252,8 @@
 
         // Initialize
         window.onload = function() {
-            checkConstraints(); // Run logic check first
-            updateView();       // Load graph
+            checkConstraints(); 
+            updateView();
         };
     </script>
 
