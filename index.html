@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Experiment Visualizer</title>
+    <style>
+        :root {
+            --header-bg: #1a1f24;
+            --control-bg: #2d333b;
+            --text-main: #ffffff;
+            --text-muted: #8b949e;
+            --accent: #2f81f7;
+            --border: #444c56;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #f4f4f9;
+        }
+
+        /* --- THE UPGRADED HEADER --- */
+        header {
+            background-color: var(--header-bg);
+            color: var(--text-main);
+            padding: 20px 30px; /* Bigger padding */
+            display: flex;
+            align-items: center;
+            gap: 25px; /* More space between items */
+            flex-wrap: wrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 { 
+            margin: 0; 
+            font-size: 1.4rem; 
+            margin-right: auto; 
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label { 
+            font-size: 0.75rem; 
+            color: var(--text-muted); 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+        }
+
+        select {
+            appearance: none; /* Removes default OS styling for a cleaner look */
+            -webkit-appearance: none;
+            background-color: var(--control-bg);
+            color: white;
+            font-size: 1rem; /* Larger text */
+            padding: 10px 35px 10px 15px; /* Larger click area */
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            min-width: 100px;
+            
+            /* Custom Dropdown Arrow */
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px top 50%;
+            background-size: 10px auto;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        select:hover {
+            border-color: #8b949e;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(47, 129, 247, 0.3);
+        }
+
+        /* Styling for disabled options */
+        option:disabled {
+            color: #666;
+            background-color: #222;
+        }
+
+        /* --- GRAPH AREA --- */
+        #graph-container {
+            flex-grow: 1;
+            position: relative;
+            background-color: white;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        /* --- STATUS BAR --- */
+        .status-bar {
+            text-align: center;
+            padding: 8px;
+            background: #fff;
+            font-size: 0.85rem;
+            color: #586069;
+            border-bottom: 1px solid #e1e4e8;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Experiment Visualizer</h1>
+        
+        <div class="control-group">
+            <label for="dataset">Dataset</label>
+            <select id="dataset" onchange="updateView()">
+                <option value="ecooling">E-Cooling</option>
+                <option value="eheating">E-Heating</option>
+                <option value="housing">Housing</option>
+                <option value="yacht">Yacht</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="method">Method</label>
+            <select id="method" onchange="checkConstraints(); updateView()">
+                <option value="kpca">KPCA</option>
+                <option value="tsne">t-SNE</option>
+                <option value="umap">UMAP</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="dims">Dimensions</label>
+            <select id="dims" onchange="updateView()">
+                <option value="2">2D</option>
+                <option value="3" id="opt-3d">3D</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="run">Run Number</label>
+            <select id="run" onchange="updateView()">
+                </select>
+        </div>
+    </header>
+
+    <div class="status-bar">
+        File: <span id="path-display">Loading...</span>
+    </div>
+
+    <div id="graph-container">
+        <iframe id="viewer" src=""></iframe>
+    </div>
+
+    <script>
+        // CONFIG
+        const totalRuns = 30; 
+        
+        // 1. SETUP RUN DROPDOWN
+        const runSelect = document.getElementById('run');
+        for (let i = 1; i <= totalRuns; i++) {
+            const opt = document.createElement('option');
+            opt.value = i; 
+            opt.innerHTML = i;
+            runSelect.appendChild(opt);
+        }
+
+        // 2. CHECK CONSTRAINTS (Handle t-SNE Logic)
+        function checkConstraints() {
+            const method = document.getElementById('method').value;
+            const dimsSelect = document.getElementById('dims');
+            const opt3d = document.getElementById('opt-3d');
+
+            if (method === 'tsne') {
+                // If t-SNE, force 2D and disable 3D
+                dimsSelect.value = "2";
+                opt3d.disabled = true;
+                opt3d.innerText = "3D (N/A)";
+            } else {
+                // For others, enable 3D
+                opt3d.disabled = false;
+                opt3d.innerText = "3D";
+            }
+        }
+
+        // 3. MAIN LOADER
+        function updateView() {
+            const dataset = document.getElementById('dataset').value;
+            const method = document.getElementById('method').value;
+            const dims = document.getElementById('dims').value;
+            const run = document.getElementById('run').value;
+            
+            const viewer = document.getElementById('viewer');
+            const pathDisplay = document.getElementById('path-display');
+
+            // --- FILE PATH CONSTRUCTION ---
+            // Folder: graphs / dataset / run_{n} /
+            // File: {method}_{dims}d.html
+            
+            const filePath = `graphs/${dataset}/run_${run}/${method}_${dims}d.html`;
+
+            // If your file naming convention is different (e.g. 1_kpca_2d.html), change line above.
+            
+            pathDisplay.textContent = filePath;
+            viewer.src = filePath;
+        }
+
+        // Initialize
+        window.onload = function() {
+            checkConstraints(); // Run logic check first
+            updateView();       // Load graph
+        };
+    </script>
+
+</body>
+</html>
