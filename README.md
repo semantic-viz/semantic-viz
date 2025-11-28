@@ -2,8 +2,7 @@
 
 # ➡️ **[Click here to open the Interactive Dashboard](https://semantic-viz.github.io/semantic-viz/)**
 
-Due to size restrictions, we could only upload 5 runs per dataset.
-
+_Due to size restrictions, we could only upload 5 runs per dataset._
 
 ## Navigating 2D Plots
 
